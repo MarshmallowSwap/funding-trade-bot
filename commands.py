@@ -1,6 +1,7 @@
 from telegram import Update
 from telegram.ext import ContextTypes
 from alert_logic import interval_to_hours
+from datetime import datetime   # <— IMPORT NECESSARIO
 
 def format_symbol_info(info):
     rate = float(info["fundingRate"]) * 100
