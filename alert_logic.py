@@ -7,10 +7,6 @@ ALERT_THRESHOLDS = {
 
 
 def classify_funding(rate: float) -> str | None:
-    """
-    Ritorna una stringa che descrive il livello di funding,
-    oppure None se non è rilevante.
-    """
     if rate >= ALERT_THRESHOLDS["extreme_high"]:
         return "extreme_high"
     if rate >= ALERT_THRESHOLDS["high"]:
@@ -23,9 +19,6 @@ def classify_funding(rate: float) -> str | None:
 
 
 def format_alert(symbol: str, rate: float, level: str) -> str:
-    """
-    Crea il messaggio di alert in base al livello.
-    """
     base = f"{symbol} funding: {rate:.3f}%"
 
     if level == "extreme_high":
@@ -41,12 +34,7 @@ def format_alert(symbol: str, rate: float, level: str) -> str:
 
 
 def process_funding(symbol: str, rate: float) -> str | None:
-    """
-    Decide se generare un alert per una coppia (symbol, rate).
-    Ritorna il testo dell’alert oppure None.
-    """
     level = classify_funding(rate)
     if not level:
         return None
-
     return format_alert(symbol, rate, level)
