@@ -1,99 +1,52 @@
-import json
-import os
-from datetime import datetime
+ALERT_THRESHOLDS = {
+    "extreme_high": 0.75,   # funding > +0.75%
+    "high":         0.50,   # funding > +0.50%
+    "extreme_low": -0.75,   # funding < -0.75%
+    "low":         -0.50,   # funding < -0.50%
+}
 
-STATE_FILE = "alert_state.json"
 
-# Carica stato da disco
-def load_state():
-    if not os.path.exists(STATE_FILE):
-        with open(STATE_FILE, "w") as f:
-            f.write("{}")
-        return {}
-    try:
-        with open(STATE_FILE, "r") as f:
-            return json.load(f)
-    except:
-        return {}
-
-# Salva stato su disco (compatto)
-def save_state(state):
-    with open(STATE_FILE, "w") as f:
-        json.dump(state, f, separators=(",", ":"))
-
-# Converte intervallo minuti → ore
-def interval_to_hours(interval_str):
-    try:
-        minutes = int(interval_str)
-        return f"{minutes // 60}h"
-    except:
-        return "?"
-
-# Determina contrarian + emoji
-def get_contrarian(rate):
-    if rate < 0:
-        return "LONG 🟢"
-    else:
-        return "SHORT 🔴"
-
-# Determina stato funding
-def classify_rate(rate):
-    if rate <= -1.5:
-        return "extreme_basso"
-    if rate >= 1.5:
-        return "extreme_alto"
-    if rate <= -1:
-        return "basso"
-    if rate >= 1:
-        return "alto"
-    if -0.75 <= rate <= 0.75:
-        return "rientro"
-    if -0.25 <= rate <= 0.25:
-        return "chiusura"
-    return "neutro"
-
-# Messaggi alert
-def build_alert(symbol, rate, interval_hours, state):
-    contrarian = get_contrarian(rate)
-
-    if state == "extreme_basso":
-        return f"🔥 Funding Estremo (Basso)\n{symbol}\nRate: {rate:.2f}%\nFunding: {interval_hours}\nContrarian: {contrarian}"
-
-    if state == "extreme_alto":
-        return f"🔥 Funding Estremo (Alto)\n{symbol}\nRate: {rate:.2f}%\nFunding: {interval_hours}\nContrarian: {contrarian}"
-
-    if state == "basso":
-        return f"🚨 Funding Basso\n{symbol}\nRate: {rate:.2f}%\nFunding: {interval_hours}\nContrarian: {contrarian}"
-
-    if state == "alto":
-        return f"🚨 Funding Alto\n{symbol}\nRate: {rate:.2f}%\nFunding: {interval_hours}\nContrarian: {contrarian}"
-
-    if state == "rientro":
-        return f"ℹ️ Funding Rientrato\n{symbol}\nRate: {rate:.2f}%\nFunding: {interval_hours}\nContrarian: {contrarian}"
-
-    if state == "chiusura":
-        return f"ℹ️ Consiglio Chiusura\n{symbol}\nRate: {rate:.2f}%\nFunding: {interval_hours}\nContrarian: {contrarian}"
-
+def classify_funding(rate: float) -> str | None:
+    """
+    Ritorna una stringa che descrive il livello di funding,
+    oppure None se non è rilevante.
+    """
+    if rate >= ALERT_THRESHOLDS["extreme_high"]:
+        return "extreme_high"
+    if rate >= ALERT_THRESHOLDS["high"]:
+        return "high"
+    if rate <= ALERT_THRESHOLDS["extreme_low"]:
+        return "extreme_low"
+    if rate <= ALERT_THRESHOLDS["low"]:
+        return "low"
     return None
 
-# Logica principale
-def process_funding(symbol, rate, interval_str):
-    state = load_state()
-    interval_hours = interval_to_hours(interval_str)
 
-    new_state = classify_rate(rate)
-    old_state = state.get(symbol, {}).get("state")
+def format_alert(symbol: str, rate: float, level: str) -> str:
+    """
+    Crea il messaggio di alert in base al livello.
+    """
+    base = f"{symbol} funding: {rate:.3f}%"
 
-    if new_state == old_state:
+    if level == "extreme_high":
+        return f"🚨 EXTREME HIGH FUNDING\n{base}\nPossibile eccesso di long."
+    if level == "high":
+        return f"⚠️ HIGH FUNDING\n{base}\nAttenzione ai long."
+    if level == "extreme_low":
+        return f"🚨 EXTREME LOW FUNDING\n{base}\nPossibile eccesso di short."
+    if level == "low":
+        return f"⚠️ LOW FUNDING\n{base}\nAttenzione agli short."
+
+    return base
+
+
+def process_funding(symbol: str, rate: float) -> str | None:
+    """
+    Decide se generare un alert per una coppia (symbol, rate).
+    Ritorna il testo dell’alert oppure None.
+    """
+    level = classify_funding(rate)
+    if not level:
         return None
 
-    alert_msg = build_alert(symbol, rate, interval_hours, new_state)
-
-    state[symbol] = {
-        "state": new_state,
-        "last_rate": rate,
-        "last_alert": datetime.utcnow().isoformat()
-    }
-    save_state(state)
-
-    return alert_msg
+    return format_alert(symbol, rate, level)
