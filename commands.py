@@ -1,73 +1,38 @@
 from telegram import Update
 from telegram.ext import ContextTypes
-from alert_logic import interval_to_hours
-from datetime import datetime   # <— IMPORT NECESSARIO
-
-def format_symbol_info(info):
-    rate = float(info["fundingRate"]) * 100
-    interval = interval_to_hours(info["fundingInterval"])
-    return f"{info['symbol']} — {rate:.2f}% — Funding: {interval}"
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text(
-        "Benvenuto! Comandi disponibili:\n"
-        "/status_new\n"
-        "/funding_1h\n"
-        "/funding_2h\n"
-        "/short\n"
-        "/long\n"
-    )
+    await update.message.reply_text("Bot attivo! Usa /status_new o /funding_all.")
 
 async def status_new(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    data = context.bot_data.get("funding_data", [])
-    new_pairs = []
+    data = context.application.bot_data.get("funding_data", [])
+    await update.message.reply_text(f"Ultimi funding: {len(data)} elementi.")
 
-    for info in data:
-        if "launchTime" in info:
-            try:
-                days = (datetime.utcnow() - datetime.fromtimestamp(int(info["launchTime"]) / 1000)).days
-                if days < 7:
-                    new_pairs.append(format_symbol_info(info))
-            except:
-                pass
-
-    if not new_pairs:
-        await update.message.reply_text("Nessuna coppia NEW.")
-    else:
-        await update.message.reply_text("\n".join(new_pairs))
+async def status_extreme(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    await update.message.reply_text("Funzione in sviluppo.")
 
 async def funding_1h(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    data = context.bot_data.get("funding_data", [])
-    pairs = [format_symbol_info(i) for i in data if i["fundingInterval"] == "60"]
-
-    if not pairs:
-        await update.message.reply_text("Nessuna coppia con funding a 1h.")
-    else:
-        await update.message.reply_text("\n".join(pairs))
+    await update.message.reply_text("Funding 1h in arrivo.")
 
 async def funding_2h(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    data = context.bot_data.get("funding_data", [])
-    pairs = [format_symbol_info(i) for i in data if i["fundingInterval"] == "120"]
-
-    if not pairs:
-        await update.message.reply_text("Nessuna coppia con funding a 2h.")
-    else:
-        await update.message.reply_text("\n".join(pairs))
+    await update.message.reply_text("Funding 2h in arrivo.")
 
 async def short(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    data = context.bot_data.get("funding_data", [])
-    pairs = [format_symbol_info(i) for i in data if float(i["fundingRate"]) > 0]
-
-    if not pairs:
-        await update.message.reply_text("Nessuna coppia con funding positivo.")
-    else:
-        await update.message.reply_text("\n".join(pairs))
+    await update.message.reply_text("Short alert.")
 
 async def long(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    data = context.bot_data.get("funding_data", [])
-    pairs = [format_symbol_info(i) for i in data if float(i["fundingRate"]) < 0]
+    await update.message.reply_text("Long alert.")
 
-    if not pairs:
-        await update.message.reply_text("Nessuna coppia con funding negativo.")
-    else:
-        await update.message.reply_text("\n".join(pairs))
+async def funding_all(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    data = context.application.bot_data.get("funding_data", [])
+    msg = "\n".join([f"{d['symbol']}: {d['fundingRate']}" for d in data[:20]])
+    await update.message.reply_text(msg)
+
+async def funding_top(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    await update.message.reply_text("Top funding.")
+
+async def funding_bottom(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    await update.message.reply_text("Bottom funding.")
+
+async def funding_alerts(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    await update.message.reply_text("Alert attivi.")
