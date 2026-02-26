@@ -1,1 +1,3 @@
-vzfJlxj2bz32fpnOpfvilEk8xrP6g1MrxnZE
+python-telegram-bot==20.7
+aiohttp
+python-dotenv
